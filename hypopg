@@ -1,0 +1,55 @@
+[root@nazelin-test-04 ~]#yum search hypopg
+[root@nazelin-test-04 ~]#yum install -y hypopg_11  > 11 sürümü var postgresql 
+[root@nazelin-test-04 ~]# su - postgres 
+-bash-4.2$ psql
+postgres=# CREATE EXTENSION hypopg ;
+CREATE EXTENSION 
+postgres=# CREATE TABLE hypo AS SELECT id, 'line ' || id AS val FROM generate_series(1,10000) id;
+SELECT 10000
+postgres=# EXPLAIN SELECT * FROM hypo WHERE id = 1;
+                      QUERY PLAN
+-------------------------------------------------------
+ Seq Scan on hypo  (cost=0.00..180.00 rows=1 width=13)
+   Filter: (id = 1)
+(2 rows)
+​
+postgres=# SELECT * FROM hypopg_create_index('CREATE INDEX ON hypo (id)');
+ indexrelid |      indexname
+------------+----------------------
+      13865 | <13865>btree_hypo_id
+(1 row) 
+postgres=#  SELECT * FROM hypopg_list_indexes ;
+ indexrelid |      index_name      | schema_name | table_name | am_name
+------------+----------------------+-------------+------------+---------
+      13865 | <13865>btree_hypo_id | public      | hypo       | btree
+(1 row)                
+postgres=# EXPLAIN SELECT * FROM hypo WHERE id = 1;
+                                    QUERY PLAN
+----------------------------------------------------------------------------------
+ Index Scan using <13865>btree_hypo_id on hypo  (cost=0.04..8.05 rows=1 width=13)
+   Index Cond: (id = 1)
+(2 rows)  
+postgres=#  EXPLAIN ANALYZE SELECT * FROM hypo WHERE id = 1;
+                                           QUERY PLAN
+-------------------------------------------------------------------------------------------------
+ Seq Scan on hypo  (cost=0.00..180.00 rows=1 width=13) (actual time=0.014..0.825 rows=1 loops=1)
+   Filter: (id = 1)
+   Rows Removed by Filter: 9999
+ Planning Time: 0.056 ms
+ Execution Time: 0.840 ms
+(5 rows) 
+​
+postgres=# \dx
+                                     List of installed extensions
+        Name        | Version |   Schema   |                        Description
+--------------------+---------+------------+-----------------------------------------------------------
+ hypopg             | 1.2.0   | public     | Hypothetical indexes for PostgreSQL
+ pg_stat_statements | 1.6     | public     | track execution statistics of all SQL statements executed
+ plpgsql            | 1.0     | pg_catalog | PL/pgSQL procedural language
+ postgres_fdw       | 1.0     | public     | foreign-data wrapper for remote PostgreSQL servers
+(4 rows)       
+​
+hypopg_relation_size(oid): hypopg ile oluşturulmuş index’in boyutunu gösterir. Bu da eğer index’i gerçekten oluşturursak kaplayacağı alan hakkında fikir sahibi olmamızı sağlar.
+hypopg_drop_index(indexrelid):Oid’sini girdiğimiz HypoPG indeksini kaldırır.
+hypopg_list_indexes():ana kadar oluşturulmuş bütün hayali indexleri listeler.
+hypopg_reset():Bütün HypoPG indexlerini kaldırır.
